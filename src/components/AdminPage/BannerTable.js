@@ -1,0 +1,159 @@
+import { Button, Form, Input } from "antd";
+import Modal from "antd/lib/modal/Modal";
+import moment from "moment";
+import React, { Fragment, useState } from "react";
+import firebase from "../../firebase/config";
+import { addDocument, DelDocument } from "../../firebase/services";
+import useFirestore from "./../../Hooks/useFirestore";
+
+export default function BannerTable() {
+  const banner = useFirestore("banner");
+  const [modalVisible1, setModalVisible1] = useState(false);
+  const [modalVisible2, setModalVisible2] = useState(false);
+  const [photo, setPhoto] = useState("");
+  const [photoURL, setPhotoURL] = useState("");
+  const [form] = Form.useForm();
+
+  const handleAddClick = () => {
+    setModalVisible1(true);
+  };
+  const UploadFile = async () => {
+    const storageRef = await firebase
+      .storage()
+      .ref(`images/${photo.name}`)
+      .put(photo);
+    const imageSrc = await storageRef.ref.getDownloadURL();
+    return setPhotoURL(imageSrc);
+  };
+  const handldeOk1 = () => {
+    UploadFile();
+    setTimeout(() => {
+      addDocument("banner", {
+        ...form.getFieldValue(),
+        photoURL: photoURL,
+      });
+      form.resetFields();
+      setModalVisible1(false);
+    }, 7000);
+  };
+  const handleCancel1 = () => {
+    form.resetFields();
+    setModalVisible1(false);
+  };
+
+  const HandleDeleteClick = () => {
+    setModalVisible2(true);
+  };
+  const handldeOk2 = () => {
+    DelDocument("banner", form.getFieldValue("id"));
+    form.resetFields();
+    setModalVisible2(false);
+  };
+  const handleCancel2 = () => {
+    form.resetFields();
+    setModalVisible2(false);
+  };
+
+  return (
+    <Fragment>
+      <div>
+        <div className="table-header">
+          <h1>QUẢN LÝ BÀI VIẾT TIÊU ĐỀ</h1>
+          <div>
+            <Button type="primary" size="large" onClick={handleAddClick}>
+              Thêm nội dung
+            </Button>
+            <Button type="danger" size="large" onClick={HandleDeleteClick}>
+              Xoá nội dung
+            </Button>
+          </div>
+        </div>
+
+        <table className="my_table">
+          <tbody>
+            <tr>
+              <th>Mã số</th>
+              <th>Tiêu đề</th>
+              <th>Phụ đề</th>
+              <th>Nội dung</th>
+              <th>Hình ảnh</th>
+              <th>Ngày đăng</th>
+            </tr>
+            {banner.map(
+              ({ uid, photoURL, title, span, createdAt, content }) => (
+                <tr key={uid}>
+                  <td>{uid}</td>
+                  <td>{title}</td>
+                  <td>{span}</td>
+                  <td>{content}</td>
+                  <td>
+                    <img
+                      src={photoURL}
+                      alt=""
+                      style={{ width: "100px", height: "100px" }}
+                    />
+                  </td>
+                  <td>{moment.unix(createdAt).format("DD/MM HH:MM")}</td>
+                </tr>
+              )
+            )}
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <Modal
+          title="Thêm bài viết chủ đề"
+          visible={modalVisible1}
+          getContainer={false}
+          onOk={handldeOk1}
+          onCancel={handleCancel1}
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item
+              label="Nhập vào mã số bài viết: (Lưu ý không trùng với các mã số khác)"
+              name="uid"
+            >
+              <Input placeholder="Nhập vào mã số bài viết..." />
+            </Form.Item>
+            <Form.Item label="Nhập vào tiêu đề bài viết:" name="title">
+              <Input placeholder="Nhập vào tiêu đề bài viết..." />
+            </Form.Item>
+            <Form.Item label="Nhập vào phụ đề bài viết:" name="span">
+              <Input placeholder="Nhập vào phụ đề bài viết..." />
+            </Form.Item>
+            <Form.Item label="Nhập vào nội dung bài viết:" name="content">
+              <Input.TextArea placeholder="Nhập vào nội dung bài viết..." />
+            </Form.Item>
+            <Form.Item
+              label="Upload hình ảnh chủ đề (đợi file upload khoảng 5 giây...):"
+              name="null"
+            >
+              <Input
+                type="file"
+                onChange={(e) => setPhoto(e.target.files[0])}
+              />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+      <div>
+        <Modal
+          title="Xoá bài viết"
+          visible={modalVisible2}
+          getContainer={false}
+          onOk={handldeOk2}
+          onCancel={handleCancel2}
+        >
+          <Form form={form} layout="vertical">
+            <Form.Item
+              label="Nhập vào mã số bài viết cần xoá (nhập chính xác):"
+              name="id"
+            >
+              <Input placeholder="Nhập vào mã số bài viết cần xoá..." />
+            </Form.Item>
+          </Form>
+        </Modal>
+      </div>
+    </Fragment>
+  );
+}
